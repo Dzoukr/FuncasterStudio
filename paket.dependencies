@@ -1,0 +1,38 @@
+version 5.249.0
+
+source https://api.nuget.org/v3/index.json
+framework: net6.0, netstandard2.0
+storage: none
+
+github Dzoukr/Funcaster src/Funcaster/Domain.fs
+
+nuget Fable.Remoting.Giraffe
+nuget Giraffe
+nuget Giraffe.GoodRead
+nuget Microsoft.ApplicationInsights.AspNetCore
+nuget Tables.FSharp
+nuget Azure.Storage.Blobs
+
+nuget Fable.Core
+nuget Fable.React
+nuget Fable.Remoting.Client
+nuget Feliz
+nuget Feliz.DaisyUI
+nuget Feliz.Router
+nuget Feliz.UseElmish
+nuget Fable.Elmish
+nuget Fable.Elmish.React
+nuget Fable.Elmish.Debugger
+nuget Fable.Elmish.HMR
+nuget FsToolkit.ErrorHandling.TaskResult
+
+
+group Build
+    source https://api.nuget.org/v3/index.json
+    framework: net6.0
+    storage: none
+
+    nuget FSharp.Core
+    nuget Fake.Core.Target
+    nuget Fake.DotNet.Cli
+    nuget Fake.IO.FileSystem

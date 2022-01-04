@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\paket-files\Dzoukr\Funcaster\src\Funcaster\Domain.fs">
+      <Paket>True</Paket>
+      <Link>paket-files/Domain.fs</Link>
+    </Compile>
+    <Compile Include="Podcasts\API.fs" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
