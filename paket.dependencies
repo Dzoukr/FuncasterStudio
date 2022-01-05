@@ -4,14 +4,14 @@ source https://api.nuget.org/v3/index.json
 framework: net6.0, netstandard2.0
 storage: none
 
-github Dzoukr/Funcaster src/Funcaster/Domain.fs
-
 nuget Fable.Remoting.Giraffe
 nuget Giraffe
 nuget Giraffe.GoodRead
 nuget Microsoft.ApplicationInsights.AspNetCore
 nuget Tables.FSharp
 nuget Azure.Storage.Blobs
+
+nuget Fable.Aether
 
 nuget Fable.Core
 nuget Fable.React
