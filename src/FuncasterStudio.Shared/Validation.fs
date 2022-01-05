@@ -17,6 +17,12 @@ type ValidationError = {
     Message : ValidationErrorType
 }
 
+module ValidationError =
+    let getAll (prop:NamedLens<_,_>) (errs:ValidationError list) =
+        errs |> List.filter (fun x -> x.Key = prop.Name) |> List.map (fun x -> x.Message)
+    let get (prop:NamedLens<_,_>) = getAll prop >> List.tryHead
+
+
 let rules (fns:('a -> ValidationError option) list) (value:'a) =
     fns
     |> List.choose (fun fn -> fn value)

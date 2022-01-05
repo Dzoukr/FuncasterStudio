@@ -15,7 +15,7 @@ let private uploadLogo (podcast:PodcastBlobContainer) (content:byte []) =
         let client = podcast |> PodcastBlobContainer.client
         let! _ = client.DeleteBlobIfExistsAsync(logoName)
         let! _ = client.UploadBlobAsync(logoName, BinaryData.FromBytes content)
-        return client.GetBlobClient(logoName).Uri |> string
+        return ()
     }
 
 let private getLogo (podcast:PodcastBlobContainer) () =
