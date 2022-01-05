@@ -25,9 +25,7 @@ type RemoteData<'a,'b> = {
 module RemoteData =
     let init = { Data = None; Response = None; InProgress = false }
     let setData value t = { t with Data = Some value; InProgress = false }
-    let getData = function
-        | { Data = Some data } -> data
-        | _ -> failwith "Transfer has no data set"
+    let tryGetData t = t.Data
     let isReady = function
         | { Data = Some _ } -> true
         | _ -> false
@@ -36,7 +34,9 @@ module RemoteData =
     let isReadyOrInProgress v = isReady v || isInProgress v
     let setInProgress t = { t with InProgress = true }
     let setResponse r t = { t with InProgress = false; Response = Some r }
+    let clearResponse t = { t with Response = None }
     let hasResponse t = t.Response.IsSome
+    let hasData t = t.Data.IsSome
 
 let podcastsAPI =
     Remoting.createApi()

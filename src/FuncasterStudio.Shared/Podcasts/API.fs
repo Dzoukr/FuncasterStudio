@@ -26,6 +26,20 @@ type Channel = {
 }
 
 module Channel =
+    let init = {
+        Title = ""
+        Link = ""
+        Description = ""
+        Language = None
+        Author = ""
+        Owner = { Name = ""; Email = "" }
+        Explicit = false
+        Image = ""
+        Category = None
+        Type = ChannelType.Episodic
+        Restrictions = []
+    }
+
     let title = NamedLens.create "title" (fun x -> x.Title) (fun x v -> { v with Title = x })
     let link = NamedLens.create "link" (fun x -> x.Link) (fun x v -> { v with Link = x })
     let description = NamedLens.create "description" (fun x -> x.Description) (fun x v -> { v with Description = x })
@@ -48,6 +62,7 @@ module Channel =
         ]
 
 type PodcastsAPI = {
+    GetLogo : unit -> Async<string>
     UploadLogo : byte [] -> Async<string>
     GetPodcast : unit -> Async<Channel>
 }

@@ -8,13 +8,20 @@ open Fable.Remoting.Giraffe
 open FuncasterStudio.Shared.Podcasts.API
 open FuncasterStudio.Server.BlobStorage
 
+let private logoName = "assets/logo.png"
+
 let private uploadLogo (podcast:PodcastBlobContainer) (content:byte []) =
     task {
-        let name = "assets/logo.png"
         let client = podcast |> PodcastBlobContainer.client
-        let! _ = client.DeleteBlobIfExistsAsync(name)
-        let! _ = client.UploadBlobAsync(name, BinaryData.FromBytes content)
-        return client.GetBlobClient(name).Uri |> string
+        let! _ = client.DeleteBlobIfExistsAsync(logoName)
+        let! _ = client.UploadBlobAsync(logoName, BinaryData.FromBytes content)
+        return client.GetBlobClient(logoName).Uri |> string
+    }
+
+let private getLogo (podcast:PodcastBlobContainer) () =
+    task {
+        let client = podcast |> PodcastBlobContainer.client
+        return client.GetBlobClient(logoName).Uri |> string
     }
 
 let getPodcast () =
@@ -36,8 +43,10 @@ let getPodcast () =
     }
 
 let private service (podcast:PodcastBlobContainer) = {
+    GetLogo = getLogo podcast >> Async.AwaitTask
     UploadLogo = uploadLogo podcast >> Async.AwaitTask
     GetPodcast = getPodcast >> Async.AwaitTask
+
 }
 
 let podcastsAPI : HttpHandler =
