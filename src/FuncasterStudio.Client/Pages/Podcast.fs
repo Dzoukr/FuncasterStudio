@@ -94,7 +94,7 @@ let textInput (builderFn:IReactProperty list -> ReactElement) (data:'a) (onDataC
         | None -> Html.none
     ]
 
-let selectInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,'b>) (from:'b -> string,to':string -> 'b) (allValues:'b list) =
+let selectInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,string>) (allValues:string list) =
     let value = data |> Optic.get n.Lens
     let err = errors |> ValidationError.get n
     Daisy.formControl [
@@ -103,11 +103,11 @@ let selectInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError lis
             input.bordered
             if err.IsSome then input.error
             prop.className "capitalize"
-            prop.onChange (fun (v:string) -> data |> Optic.set n.Lens (to' v) |> onDataChanged)
+            prop.onChange (fun (v:string) -> data |> Optic.set n.Lens v |> onDataChanged)
             prop.children [
                 for v in allValues do
                     Html.option [
-                        prop.text (v |> from)
+                        prop.text v
                         prop.className "capitalize"
                         if v = value then prop.selected true
                     ]
@@ -125,6 +125,7 @@ let checkboxInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError l
         Daisy.label [ Daisy.labelText n.Name ]
         Daisy.toggle [
             input.bordered
+            prop.className "my-3"
             if err.IsSome then input.error
             prop.valueOrDefault value
             prop.onChange (fun (t:bool) -> data |> Optic.set n.Lens t |> onDataChanged)
@@ -134,6 +135,8 @@ let checkboxInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError l
         | None -> Html.none
     ]
 
+let private fromList (xs:string list) = xs |> String.concat ", "
+let private toList (s:string) = s.Split(",") |> Seq.map (fun x -> x.Trim()) |> Seq.toList
 
 [<ReactComponent>]
 let PodcastView () =
@@ -174,19 +177,20 @@ let PodcastView () =
         Html.divClassed "col-span-8" [
 
             Html.divClassed "grid grid-cols-2 gap-4" [
-                Html.div [
+                Html.divClassed "flex flex-col" [
                     ti Channel.title
                     lti Channel.description
                     ti Channel.author
                     ti Channel.category
-                    si Channel.type' (ChannelType.value, ChannelType.create) [ ChannelType.Serial; ChannelType.Episodic ]
+                    si (Compose.namedLens Channel.type' (ChannelType.value, ChannelType.create)) ([ Serial; Episodic ] |> List.map ChannelType.value)
                 ]
                 Html.div [
                     ti Channel.link
-                    ti Channel.language
                     ti Channel.ownerName
                     ti Channel.ownerEmail
+                    ti Channel.language
                     ci Channel.explicit
+                    ti (Compose.namedLens Channel.restrictions (fromList,toList))
                 ]
             ]
 
