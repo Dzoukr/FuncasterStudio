@@ -77,12 +77,12 @@ let update (msg:Msg) (model:State) : State * Cmd<Msg> =
     | SendPodcast ->
         model, Cmd.none
 
-let textInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,string>) =
+let textInput (builderFn:IReactProperty list -> ReactElement) (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,string>) =
     let value = data |> Optic.get n.Lens
     let err = errors |> ValidationError.get n
     Daisy.formControl [
         Daisy.label [ Daisy.labelText n.Name ]
-        Daisy.input [
+        builderFn [
             input.bordered
             if err.IsSome then input.error
             prop.valueOrDefault value
@@ -94,11 +94,55 @@ let textInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list)
         | None -> Html.none
     ]
 
+let selectInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,'b>) (from:'b -> string,to':string -> 'b) (allValues:'b list) =
+    let value = data |> Optic.get n.Lens
+    let err = errors |> ValidationError.get n
+    Daisy.formControl [
+        Daisy.label [ Daisy.labelText n.Name ]
+        Daisy.select [
+            input.bordered
+            if err.IsSome then input.error
+            prop.className "capitalize"
+            prop.onChange (fun (v:string) -> data |> Optic.set n.Lens (to' v) |> onDataChanged)
+            prop.children [
+                for v in allValues do
+                    Html.option [
+                        prop.text (v |> from)
+                        prop.className "capitalize"
+                        if v = value then prop.selected true
+                    ]
+            ]
+        ]
+        match err with
+        | Some e -> Daisy.label [ Daisy.labelTextAlt [ prop.text (ValidationErrorType.explain e); color.textError ] ]
+        | None -> Html.none
+    ]
+
+let checkboxInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,bool>) =
+    let value = data |> Optic.get n.Lens
+    let err = errors |> ValidationError.get n
+    Daisy.formControl [
+        Daisy.label [ Daisy.labelText n.Name ]
+        Daisy.toggle [
+            input.bordered
+            if err.IsSome then input.error
+            prop.valueOrDefault value
+            prop.onChange (fun (t:bool) -> data |> Optic.set n.Lens t |> onDataChanged)
+        ]
+        match err with
+        | Some e -> Daisy.label [ Daisy.labelTextAlt [ prop.text (ValidationErrorType.explain e); color.textError ] ]
+        | None -> Html.none
+    ]
+
+
 [<ReactComponent>]
 let PodcastView () =
     let state, dispatch = React.useElmish(init, update, [|  |])
 
-    let ti = textInput state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
+    let ti = textInput Daisy.input state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
+    let lti = textInput Daisy.textarea state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
+    let si = selectInput state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
+    let ci = checkboxInput state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
 
     Html.divClassed "grid grid-cols-12 gap-4 px-4 mt-4" [
         Html.divClassed "col-span-4" [
@@ -128,9 +172,23 @@ let PodcastView () =
             ]
         ]
         Html.divClassed "col-span-8" [
-            ti Channel.title
-            ti Channel.link
-            ti Channel.description
+
+            Html.divClassed "grid grid-cols-2 gap-4" [
+                Html.div [
+                    ti Channel.title
+                    lti Channel.description
+                    ti Channel.author
+                    ti Channel.category
+                    si Channel.type' (ChannelType.value, ChannelType.create) [ ChannelType.Serial; ChannelType.Episodic ]
+                ]
+                Html.div [
+                    ti Channel.link
+                    ti Channel.language
+                    ti Channel.ownerName
+                    ti Channel.ownerEmail
+                    ci Channel.explicit
+                ]
+            ]
 
             Daisy.label [  ]
             Daisy.button.button [

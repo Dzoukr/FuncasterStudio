@@ -11,6 +11,17 @@ type Owner = {
 
 type ChannelType = Episodic | Serial
 
+module ChannelType =
+    let value = function
+        | Episodic -> "episodic"
+        | Serial -> "serial"
+
+    let create (v:string) =
+        match v.ToUpper() with
+        | "EPISODIC" -> Episodic
+        | "SERIAL" -> Serial
+        | x -> failwith $"Unrecognized value for ChannelType {x}"
+
 type Channel = {
     Title : string
     Link : string
@@ -47,6 +58,7 @@ module Channel =
     let author = NamedLens.create "Author" (fun x -> x.Author) (fun x v -> { v with Author = x })
     let ownerName = NamedLens.create "Owner Name" (fun x -> x.Owner.Name) (fun x v -> { v with Owner = { v.Owner with Name = x } })
     let ownerEmail = NamedLens.create "Owner Email" (fun x -> x.Owner.Email) (fun x v -> { v with Owner = { v.Owner with Email = x } })
+    let explicit = NamedLens.create "Explicit" (fun x -> x.Explicit) (fun x v -> { v with Explicit = x })
     let category = NamedLens.create "Category" (fun x -> x.Category |> Option.defaultValue "") (fun x v -> { v with Category = if String.IsNullOrEmpty x then None else Some x })
     let type' = NamedLens.create "Type" (fun x -> x.Type) (fun x v -> { v with Type = x })
     let restrictions = NamedLens.create "Restrictions" (fun x -> x.Restrictions) (fun x v -> { v with Restrictions = x })
