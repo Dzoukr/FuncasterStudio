@@ -420,7 +420,9 @@ NUGET
       System.Reflection.Emit.Lightweight (>= 4.3)
       System.Threading.Tasks.Extensions (>= 4.4)
       System.ValueTuple (>= 4.4)
-
+GITHUB
+  remote: Dzoukr/Funcaster
+    src/Funcaster/Domain.fs (621a9d92167161fec39e6398314cb39e774fcfe9)
 GROUP Build
 STORAGE: NONE
 RESTRICTION: == net6.0

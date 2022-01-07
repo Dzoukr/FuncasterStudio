@@ -3,24 +3,7 @@
 open System
 open Aether
 open FuncasterStudio.Shared.Validation
-
-type Owner = {
-    Name : string
-    Email : string
-}
-
-type ChannelType = Episodic | Serial
-
-module ChannelType =
-    let value = function
-        | Episodic -> "episodic"
-        | Serial -> "serial"
-
-    let create (v:string) =
-        match v.ToUpper() with
-        | "EPISODIC" -> Episodic
-        | "SERIAL" -> Serial
-        | x -> failwith $"Unrecognized value for ChannelType {x}"
+open Funcaster.Domain
 
 type Channel = {
     Title : string
@@ -28,9 +11,10 @@ type Channel = {
     Description : string
     Language : string option
     Author : string
-    Owner : Owner
+    OwnerName : string
+    OwnerEmail : string
     Explicit : bool
-    Image : string
+    //Image : string
     Category : string option
     Type : ChannelType
     Restrictions : string list
@@ -43,9 +27,10 @@ module Channel =
         Description = ""
         Language = None
         Author = ""
-        Owner = { Name = ""; Email = "" }
+        OwnerName = ""
+        OwnerEmail = ""
         Explicit = false
-        Image = ""
+        //Image = ""
         Category = None
         Type = ChannelType.Episodic
         Restrictions = []
@@ -56,8 +41,8 @@ module Channel =
     let description = NamedLens.create "Description" (fun x -> x.Description) (fun x v -> { v with Description = x })
     let language = NamedLens.create "Language" (fun x -> x.Language |> Option.defaultValue "") (fun x v -> { v with Language = if String.IsNullOrEmpty x then None else Some x })
     let author = NamedLens.create "Author" (fun x -> x.Author) (fun x v -> { v with Author = x })
-    let ownerName = NamedLens.create "Owner Name" (fun x -> x.Owner.Name) (fun x v -> { v with Owner = { v.Owner with Name = x } })
-    let ownerEmail = NamedLens.create "Owner Email" (fun x -> x.Owner.Email) (fun x v -> { v with Owner = { v.Owner with Email = x } })
+    let ownerName = NamedLens.create "Owner Name" (fun x -> x.OwnerName) (fun x v -> { v with OwnerName = x })
+    let ownerEmail = NamedLens.create "Owner Email" (fun x -> x.OwnerEmail) (fun x v -> { v with OwnerEmail = x })
     let explicit = NamedLens.create "Explicit" (fun x -> x.Explicit) (fun x v -> { v with Explicit = x })
     let category = NamedLens.create "Category" (fun x -> x.Category |> Option.defaultValue "") (fun x v -> { v with Category = if String.IsNullOrEmpty x then None else Some x })
     let type' = NamedLens.create "Type" (fun x -> x.Type) (fun x v -> { v with Type = x })
@@ -66,7 +51,7 @@ module Channel =
     let validate =
         rules [
             check title Validator.isNotEmpty
-            check link Validator.isNotEmpty
+            check link Validator.isUri
             check description Validator.isNotEmpty
             check author Validator.isNotEmpty
             check ownerName Validator.isNotEmpty
@@ -77,6 +62,7 @@ type PodcastsAPI = {
     GetLogo : unit -> Async<string>
     UploadLogo : byte [] -> Async<unit>
     GetPodcast : unit -> Async<Channel>
+    SavePodcast : Channel -> Async<unit>
 }
 with
     static member RouteBuilder _ m = sprintf "/api/podcasts/%s" m

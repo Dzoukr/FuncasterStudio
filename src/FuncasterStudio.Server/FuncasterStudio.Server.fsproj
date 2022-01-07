@@ -5,7 +5,7 @@
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BlobStorage.fs" />
+    <Compile Include="PodcastStorage.fs" />
     <Compile Include="Podcasts\API.fs" />
     <Compile Include="WebApp.fs" />
     <Compile Include="Startup.fs" />

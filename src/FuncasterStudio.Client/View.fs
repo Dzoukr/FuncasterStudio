@@ -36,7 +36,7 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
         ]
     Html.divClassed "flex flex-col h-screen" [
         Daisy.navbar [
-            prop.className "mb-2 shadow-lg bg-neutral text-neutral-content"
+            prop.className "mb-2 px-4 md:px-16 lg:px-32 shadow-lg bg-neutral text-neutral-content"
             prop.children [
                 Daisy.navbarStart [
                     Html.img [ prop.src "https://github.com/Dzoukr/Funcaster/blob/master/logo.png?raw=true"; prop.className "w-12 mx-5" ]
@@ -51,7 +51,7 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
                 Daisy.navbarEnd []
             ]
         ]
-        Html.divClassed "flex-grow" [ elm ]
+        Html.divClassed "flex-grow px-4 md:px-16 lg:px-32" [ elm ]
         Daisy.footer [
             prop.className "p-4 bg-neutral text-neutral-content" ++ footer.center
             prop.children [

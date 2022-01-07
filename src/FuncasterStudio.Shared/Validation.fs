@@ -6,11 +6,13 @@ open Aether
 type ValidationErrorType =
     | IsEmpty
     | IsNotEmail
+    | IsNotUri
 
 module ValidationErrorType =
     let explain = function
         | IsEmpty -> "Must contain some value"
         | IsNotEmail -> "Must be valid email"
+        | IsNotUri -> "Must be valid URL address"
 
 type ValidationError = {
     Key : string
@@ -42,3 +44,8 @@ type Validator =
         else
             let lastPart = parts.[parts.Length - 1]
             if (lastPart.Split([|'.'|], StringSplitOptions.RemoveEmptyEntries).Length > 1) then None else Some IsNotEmail
+
+    static member isUri (value:string) =
+        match Uri.TryCreate(value, UriKind.Absolute) with
+        | true, v ->None
+        | _ -> Some IsNotUri

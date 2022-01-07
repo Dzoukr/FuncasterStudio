@@ -31,8 +31,8 @@ type Msg =
     | LoadPodcast
     | PodcastLoaded of Channel
     | PodcastChanged of Channel
-    | SendPodcast
-    | PodcastSent of unit
+    | SavePodcast
+    | PodcastSaved of unit
 
 let init () =
     {
@@ -74,8 +74,8 @@ let update (msg:Msg) (model:State) : State * Cmd<Msg> =
             PodcastForm = model.PodcastForm |> RemoteData.setData channel
             PodcastFormErrors = channel |> Channel.validate }, Cmd.none
     | PodcastChanged channel -> { model with PodcastForm = model.PodcastForm |> RemoteData.setData channel; PodcastFormErrors = channel |> Channel.validate }, Cmd.none
-    | SendPodcast ->
-        model, Cmd.none
+    | SavePodcast -> { model with PodcastForm = model.PodcastForm |> RemoteData.setInProgress }, Cmd.OfAsync.perform podcastsAPI.SavePodcast model.PodcastForm.Data PodcastSaved
+    | PodcastSaved _ -> { model with PodcastForm = model.PodcastForm |> RemoteData.setResponse () }, Cmd.none
 
 let textInput (builderFn:IReactProperty list -> ReactElement) (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError list) (n:NamedLens<'a,string>) =
     let value = data |> Optic.get n.Lens
@@ -127,7 +127,7 @@ let checkboxInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError l
             input.bordered
             prop.className "my-3"
             if err.IsSome then input.error
-            prop.valueOrDefault value
+            prop.isChecked value
             prop.onChange (fun (t:bool) -> data |> Optic.set n.Lens t |> onDataChanged)
         ]
         match err with
@@ -138,6 +138,8 @@ let checkboxInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError l
 let private fromList (xs:string list) = xs |> String.concat ", "
 let private toList (s:string) = s.Split(",") |> Seq.map (fun x -> x.Trim()) |> Seq.toList
 
+open Funcaster.Domain
+
 [<ReactComponent>]
 let PodcastView () =
     let state, dispatch = React.useElmish(init, update, [|  |])
@@ -147,7 +149,7 @@ let PodcastView () =
     let si = selectInput state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
     let ci = checkboxInput state.PodcastForm.Data (PodcastChanged >> dispatch) state.PodcastFormErrors
 
-    Html.divClassed "grid grid-cols-12 gap-4 px-4 mt-4" [
+    Html.divClassed "grid grid-cols-12 gap-4 mt-4" [
         Html.divClassed "col-span-4" [
             Html.divClassed "text-center" [
                 Html.img [
@@ -199,8 +201,8 @@ let PodcastView () =
                 prop.text "Update"
                 prop.disabled (state.PodcastFormErrors |> List.isEmpty |> not)
                 button.primary
-
-                prop.onClick (fun _ -> SendPodcast |> dispatch)
+                if state.PodcastForm.InProgress then button.loading
+                prop.onClick (fun _ -> SavePodcast |> dispatch)
             ]
         ]
     ]

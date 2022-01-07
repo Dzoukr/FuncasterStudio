@@ -4,9 +4,12 @@
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\paket-files\Dzoukr\Funcaster\src\Funcaster\Domain.fs">
+      <Paket>True</Paket>
+      <Link>paket-files/Domain.fs</Link>
+    </Compile>
     <Compile Include="Aether.fs" />
     <Compile Include="Validation.fs" />
-    <Compile Include="FuncasterDomain.fs" />
     <Compile Include="Podcasts\API.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

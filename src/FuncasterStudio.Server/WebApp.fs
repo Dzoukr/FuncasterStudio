@@ -1,6 +1,5 @@
 ﻿module FuncasterStudio.Server.WebApp
 
-open FuncasterStudio.Server.BlobStorage
 open Giraffe
 
 let webApp : HttpHandler =

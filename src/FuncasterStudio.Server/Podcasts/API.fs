@@ -1,59 +1,84 @@
 ﻿module FuncasterStudio.Server.Podcasts.API
 
 open System
+open Azure.Data.Tables
+open Azure.Storage.Blobs
+open FuncasterStudio.Server
 open Giraffe
 open Giraffe.GoodRead
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open FuncasterStudio.Shared.Podcasts.API
-open FuncasterStudio.Server.BlobStorage
+open FsToolkit.ErrorHandling
 
 let private logoName = "assets/logo.png"
 
-let private uploadLogo (podcast:PodcastBlobContainer) (content:byte []) =
+let private uploadLogo (blobContainer:BlobContainerClient) (content:byte []) =
     task {
-        let client = podcast |> PodcastBlobContainer.client
-        let! _ = client.DeleteBlobIfExistsAsync(logoName)
-        let! _ = client.UploadBlobAsync(logoName, BinaryData.FromBytes content)
+        let! _ = blobContainer.DeleteBlobIfExistsAsync(logoName)
+        let! _ = blobContainer.UploadBlobAsync(logoName, BinaryData.FromBytes content)
         return ()
     }
 
-let private getLogo (podcast:PodcastBlobContainer) () =
+let private getLogo (blobContainer:BlobContainerClient) () =
     task {
-        let client = podcast |> PodcastBlobContainer.client
-        return client.GetBlobClient(logoName).Uri |> string
+        return blobContainer.GetBlobClient(logoName).Uri |> string
     }
 
-let getPodcast () =
+let getPodcast (podcastTableClient:TableClient) () =
     task {
-        return
+        match! PodcastStorage.getPodcast podcastTableClient () with
+        | Some c ->
+            return
+                {
+                    Title = c.Title
+                    Link = c.Link |> string
+                    Description = c.Description
+                    Language = c.Language
+                    Author = c.Author
+                    OwnerName = c.Owner.Name
+                    OwnerEmail = c.Owner.Email
+                    Explicit = c.Explicit
+                    Category = c.Category
+                    Type = c.Type
+                    Restrictions = c.Restrictions
+                }
+        | None -> return Channel.init
+    }
+
+let savePodcast (blobContainer:BlobContainerClient) (podcastTableClient:TableClient) (c:Channel) =
+    task {
+        let! logo = getLogo blobContainer ()
+        let channel : Funcaster.Domain.Channel =
             {
-                Title = ""
-                Link = "https://example.com"
-                Description = ""
-                Language = None
-                Author = ""
-                Owner = { Name = ""; Email = "" }
-                Explicit = false
-                Image = "https://example.com"
-                Category = None
-                Type = ChannelType.Episodic
-                Restrictions = [] }
-
+                Title = c.Title
+                Link = c.Link |> Uri
+                Description = c.Description
+                Language = c.Language
+                Author = c.Author
+                Owner = { Name = c.OwnerName; Email = c.OwnerEmail }
+                Explicit = c.Explicit
+                Image = logo |> Uri
+                Category = c.Category
+                Type = c.Type
+                Restrictions = c.Restrictions
+            }
+        return!
+            channel |> PodcastStorage.upsertPodcast podcastTableClient
     }
 
-let private service (podcast:PodcastBlobContainer) = {
-    GetLogo = getLogo podcast >> Async.AwaitTask
-    UploadLogo = uploadLogo podcast >> Async.AwaitTask
-    GetPodcast = getPodcast >> Async.AwaitTask
-
+let private service (blobContainer:BlobContainerClient) (podcastTableClient:TableClient) = {
+    GetLogo = getLogo blobContainer >> Async.AwaitTask
+    UploadLogo = uploadLogo blobContainer >> Async.AwaitTask
+    GetPodcast = getPodcast podcastTableClient >> Async.AwaitTask
+    SavePodcast = savePodcast blobContainer podcastTableClient >> Async.AwaitTask
 }
 
 let podcastsAPI : HttpHandler =
-    Require.services<PodcastBlobContainer> (fun podcast ->
+    Require.services<BlobContainerClient, TableClient> (fun blobContainer tableClient ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder PodcastsAPI.RouteBuilder
-        |> Remoting.fromValue (service podcast)
+        |> Remoting.fromValue (service blobContainer tableClient)
         |> Remoting.buildHttpHandler
     )
 
