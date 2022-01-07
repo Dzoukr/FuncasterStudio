@@ -6,6 +6,7 @@ open Fable.Core.JsInterop
 
 type Page =
     | Episodes
+    | EpisodesCreate
     | Podcast
     | Messages
 
@@ -13,7 +14,13 @@ type Page =
 module Page =
     let defaultPage = Page.Episodes
 
+    let areRelated (currentPage:Page) (next:Page) =
+        match currentPage, next with
+        | EpisodesCreate, Episodes -> true
+        | c, n -> c = n
+
     let parseFromUrlSegments = function
+        | [ "episodes"; "create" ] -> Page.EpisodesCreate
         | [ "episodes" ] -> Page.Episodes
         | [ "podcast" ] -> Page.Podcast
         | [ "messages" ] -> Page.Messages
@@ -22,6 +29,7 @@ module Page =
     let noQueryString segments : string list * (string * string) list = segments, []
 
     let toUrlSegments = function
+        | Page.EpisodesCreate -> [ "episodes"; "create" ] |> noQueryString
         | Page.Episodes -> [ "episodes" ] |> noQueryString
         | Page.Podcast -> [ "podcast" ] |> noQueryString
         | Page.Messages -> [ "messages" ] |> noQueryString

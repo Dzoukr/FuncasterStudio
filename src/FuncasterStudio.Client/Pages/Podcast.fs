@@ -103,13 +103,13 @@ let selectInput (data:'a) (onDataChanged:'a -> unit) (errors:ValidationError lis
             input.bordered
             if err.IsSome then input.error
             prop.className "capitalize"
+            prop.defaultValue value
             prop.onChange (fun (v:string) -> data |> Optic.set n.Lens v |> onDataChanged)
             prop.children [
                 for v in allValues do
                     Html.option [
                         prop.text v
                         prop.className "capitalize"
-                        if v = value then prop.selected true
                     ]
             ]
         ]

@@ -25,7 +25,7 @@ let update (msg:Msg) (state:State) : State * Cmd<Msg> =
 let private inTemplate (ap:Page) (elm:ReactElement) =
     let btn (p:Page) (text:string) (icon:string) =
         Daisy.button.button [
-            if p = ap then button.active
+            if Page.areRelated ap p then button.active
             button.ghost
             ++ prop.className "mx-1"
             prop.onClick (fun _ -> p |> Router.navigatePage)
@@ -36,7 +36,7 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
         ]
     Html.divClassed "flex flex-col h-screen" [
         Daisy.navbar [
-            prop.className "mb-2 px-4 md:px-16 lg:px-32 shadow-lg bg-neutral text-neutral-content"
+            prop.className "mb-4 px-4 md:px-16 lg:px-32 shadow-lg bg-neutral text-neutral-content"
             prop.children [
                 Daisy.navbarStart [
                     Html.img [ prop.src "https://github.com/Dzoukr/Funcaster/blob/master/logo.png?raw=true"; prop.className "w-12 mx-5" ]
@@ -82,7 +82,8 @@ let AppView (state:State) (dispatch:Msg -> unit) =
         router.onUrlChanged (Page.parseFromUrlSegments >> UrlChanged >> dispatch)
         router.children [
             match state.Page with
-            | Page.Episodes -> Html.text "EP"
+            | Page.Episodes -> Pages.Episodes.EpisodesView ()
+            | Page.EpisodesCreate -> Pages.EpisodesForm.EpisodesFormView None
             | Page.Podcast -> Pages.Podcast.PodcastView ()
             | Page.Messages -> Html.text "ME"
             |> inTemplate state.Page

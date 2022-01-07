@@ -4,15 +4,17 @@ open System
 open Aether
 
 type ValidationErrorType =
-    | IsEmpty
-    | IsNotEmail
-    | IsNotUri
+    | MustBeFilled
+    | MustBeEmail
+    | MustBeUri
+    | MustBeLongerThanTimespan of ts:TimeSpan
 
 module ValidationErrorType =
     let explain = function
-        | IsEmpty -> "Must contain some value"
-        | IsNotEmail -> "Must be valid email"
-        | IsNotUri -> "Must be valid URL address"
+        | MustBeFilled -> "Must contain some value"
+        | MustBeEmail -> "Must be valid email"
+        | MustBeUri -> "Must be valid URL address"
+        | MustBeLongerThanTimespan ts -> $"Must be longer than {ts}"
 
 type ValidationError = {
     Key : string
@@ -36,16 +38,21 @@ let check (l:NamedLens<'a,'b>) (fn:'b -> ValidationErrorType option) (value:'a) 
     |> Option.map (fun err -> { Key = l.Name; Message = err })
 
 type Validator =
-    static member isNotEmpty (v:string) = if String.IsNullOrWhiteSpace v then Some IsEmpty else None
+    static member isNotEmpty (v:string) = if String.IsNullOrWhiteSpace v then Some MustBeFilled else None
 
     static member isEmail (value:string) =
         let parts = value.Split([|'@'|])
-        if parts.Length < 2 then Some IsNotEmail
+        if parts.Length < 2 then Some MustBeEmail
         else
             let lastPart = parts.[parts.Length - 1]
-            if (lastPart.Split([|'.'|], StringSplitOptions.RemoveEmptyEntries).Length > 1) then None else Some IsNotEmail
+            if (lastPart.Split([|'.'|], StringSplitOptions.RemoveEmptyEntries).Length > 1) then None else Some MustBeEmail
 
     static member isUri (value:string) =
         match Uri.TryCreate(value, UriKind.Absolute) with
-        | true, v ->None
-        | _ -> Some IsNotUri
+        | true, _ -> None
+        | _ -> Some MustBeUri
+
+    static member isLongerThan (than:TimeSpan) =
+        fun (value:TimeSpan) ->
+        if value > than then None
+        else Some (MustBeLongerThanTimespan than)

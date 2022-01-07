@@ -10,7 +10,9 @@
     </Compile>
     <Compile Include="Aether.fs" />
     <Compile Include="Validation.fs" />
+    <Compile Include="Errors.fs" />
     <Compile Include="Podcasts\API.fs" />
+    <Compile Include="Episodes\API.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

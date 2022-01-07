@@ -8,6 +8,8 @@
         <Compile Include="Router.fs" />
         <Compile Include="SharedView.fs" />
         <Compile Include="Pages\Podcast.fs" />
+        <Compile Include="Pages\Episodes.fs" />
+        <Compile Include="Pages\EpisodesForm.fs" />
         <Compile Include="View.fs" />
         <Compile Include="App.fs" />
         <Content Include="index.html" />

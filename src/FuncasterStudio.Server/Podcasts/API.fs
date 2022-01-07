@@ -10,6 +10,7 @@ open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open FuncasterStudio.Shared.Podcasts.API
 open FsToolkit.ErrorHandling
+open Microsoft.Extensions.Logging
 
 let private logoName = "assets/logo.png"
 
@@ -74,11 +75,14 @@ let private service (blobContainer:BlobContainerClient) (podcastTableClient:Tabl
     SavePodcast = savePodcast blobContainer podcastTableClient >> Async.AwaitTask
 }
 
+
 let podcastsAPI : HttpHandler =
-    Require.services<BlobContainerClient, TableClient> (fun blobContainer tableClient ->
+    Require.services<ILogger<_>, BlobContainerClient, TableClient> (fun logger blobContainer tableClient ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder PodcastsAPI.RouteBuilder
         |> Remoting.fromValue (service blobContainer tableClient)
+        |> Remoting.withBinarySerialization
+        |> Remoting.withErrorHandler (Remoting.errorHandler logger)
         |> Remoting.buildHttpHandler
     )
 
