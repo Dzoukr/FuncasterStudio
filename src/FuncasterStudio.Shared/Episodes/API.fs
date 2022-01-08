@@ -10,11 +10,13 @@ type Episode = {
     Season : int option
     Episode : int option
     //Enclosure : Enclosure
-    Publish : DateTimeOffset
+    //Publish : DateTimeOffset
+    Publish : string
     Title : string
     Description : string
     Restrictions : string list
-    Duration : TimeSpan
+//    Duration : TimeSpan
+    Duration : string
     Explicit : bool
     //Image : Uri option
     Keywords : string list
@@ -26,11 +28,11 @@ module Episode =
         Guid = ""
         Season = None
         Episode = None
-        Publish = DateTimeOffset.MaxValue
+        Publish = ""
         Title = ""
         Description = ""
         Restrictions = []
-        Duration = TimeSpan.Zero
+        Duration = ""
         Explicit = false
         Keywords = []
         EpisodeType = EpisodeType.Full
@@ -50,16 +52,28 @@ module Episode =
 
     let validate =
         rules [
-            check guid Validator.isUri
+            check guid Validator.isNotEmpty
             check title Validator.isNotEmpty
             check description Validator.isNotEmpty
-            check duration (Validator.isLongerThan TimeSpan.Zero)
+            check duration Validator.isTimeSpanFormat
+            check publish Validator.isDateTimeOffsetFormat
         ]
 
-type EpisodeLogo = {
-    EpisodeGuid : string
-    Logo : byte []
+type DataFile = {
+    Data : byte []
+    Name : string
 }
+
+module DataFile =
+    let init = { Data = [||]; Name = "" }
+    let name = NamedLens.create "Name" (fun x -> x.Name) (fun x v -> { v with Name = x })
+    let data = NamedLens.create "Data" (fun x -> x.Data) (fun x v -> { v with Data = x })
+
+    let validate =
+        rules [
+            check name Validator.isNotEmpty
+            check data Validator.isNotEmpty
+        ]
 
 type EpisodesAPI = {
     //GetLogo : string -> Async<string>

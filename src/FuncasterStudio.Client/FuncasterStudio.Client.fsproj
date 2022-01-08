@@ -7,6 +7,7 @@
         <Compile Include="Server.fs" />
         <Compile Include="Router.fs" />
         <Compile Include="SharedView.fs" />
+        <Compile Include="Forms.fs" />
         <Compile Include="Pages\Podcast.fs" />
         <Compile Include="Pages\Episodes.fs" />
         <Compile Include="Pages\EpisodesForm.fs" />

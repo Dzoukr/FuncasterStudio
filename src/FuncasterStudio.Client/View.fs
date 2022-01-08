@@ -46,7 +46,7 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
                 Daisy.navbarCenter [
                     btn Page.Episodes "Episodes" "fas fa-stream"
                     btn Page.Podcast "Podcast" "fas fa-podcast"
-                    btn Page.Messages "Messages" "fas fa-comments"
+                    //btn Page.Messages "Messages" "fas fa-comments"
                 ]
                 Daisy.navbarEnd []
             ]

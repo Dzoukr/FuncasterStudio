@@ -19,21 +19,25 @@ module RemoteReadData =
     let setInProgress = InProgress
     let setResponse r = Finished r
 
-type RemoteData<'a,'b> = {
-    Data : 'a
-    Response : 'b option
+type RemoteData<'data,'response,'error> = {
+    Data : 'data
+    Response : 'response option
     InProgress : bool
+    Errors : 'error list
 }
 
 module RemoteData =
-    let init data = { Data = data; Response = None; InProgress = false }
-    let setData value t = { t with Data = value; InProgress = false }
+    let noValidation _ = []
+    let init data validationFn = { Data = data; Response = None; InProgress = false; Errors = data |> validationFn  }
+    let setData value validationFn t = { t with Data = value; InProgress = false; Errors = value |> validationFn }
     let getData t = t.Data
     let isInProgress t = t.InProgress
     let setInProgress t = { t with InProgress = true }
     let setResponse r t = { t with InProgress = false; Response = Some r }
     let clearResponse t = { t with Response = None }
     let hasResponse t = t.Response.IsSome
+    let isValid t = t.Errors.Length = 0
+    let isNotValid t = t |> isValid |> not
 
 let exnToError (e:exn) : ServerError =
     match e with
