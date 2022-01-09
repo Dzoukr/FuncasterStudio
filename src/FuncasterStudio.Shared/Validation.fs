@@ -14,11 +14,11 @@ type ValidationErrorType =
 module ValidationErrorType =
     let explain = function
         | MustBeFilled -> "Must contain some value"
-        | MustBeEmail -> "Must be valid email"
-        | MustBeUri -> "Must be valid URL address"
+        | MustBeEmail -> "Must be a valid email"
+        | MustBeUri -> "Must be a valid URL address"
         | MustBeLongerThanTimespan ts -> $"Must be longer than {ts}"
-        | MustBeDateTimeOffsetFormat -> "Must correct date format"
-        | MustBeTimeSpanFormat -> "Must correct time format"
+        | MustBeDateTimeOffsetFormat -> "Must be a correct date format"
+        | MustBeTimeSpanFormat -> "Must be a correct time format"
 
 type ValidationError = {
     Key : string
@@ -43,7 +43,7 @@ let check (l:NamedLens<'a,'b>) (fn:'b -> ValidationErrorType option) (value:'a) 
 
 type Validator =
     static member isNotEmpty (v:string) = if String.IsNullOrWhiteSpace v then Some MustBeFilled else None
-    static member isNotEmpty (v:byte []) = if v.LongLength > 0L then None else Some MustBeFilled
+    static member isNotEmpty (v:byte []) = if v.Length > 0 then None else Some MustBeFilled
 
     static member isEmail (value:string) =
         let parts = value.Split([|'@'|])

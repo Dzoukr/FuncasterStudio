@@ -32,7 +32,7 @@ type Msg =
     | PodcastLoaded of Channel
     | PodcastChanged of Channel
     | SavePodcast
-    | PodcastSaved of unit
+    | PodcastSaved of ServerResult<unit>
 
 let init () =
     {
@@ -72,8 +72,11 @@ let update (msg:Msg) (model:State) : State * Cmd<Msg> =
             Podcast = RemoteReadData.Finished channel
             PodcastForm = model.PodcastForm |> RemoteData.setData channel Channel.validate }, Cmd.none
     | PodcastChanged channel -> { model with PodcastForm = model.PodcastForm |> RemoteData.setData channel Channel.validate }, Cmd.none
-    | SavePodcast -> { model with PodcastForm = model.PodcastForm |> RemoteData.setInProgress }, Cmd.OfAsync.perform podcastsAPI.SavePodcast model.PodcastForm.Data PodcastSaved
-    | PodcastSaved _ -> { model with PodcastForm = model.PodcastForm |> RemoteData.setResponse () }, Cmd.none
+    | SavePodcast -> { model with PodcastForm = model.PodcastForm |> RemoteData.setInProgress }, Cmd.OfAsync.eitherAsResult (fun _ -> podcastsAPI.SavePodcast model.PodcastForm.Data) PodcastSaved
+    | PodcastSaved res ->
+        let cmd =
+            res |> ToastView.Cmd.ofResult "Podcast metadata successfully saved"
+        { model with PodcastForm = model.PodcastForm |> RemoteData.setResponse () }, cmd
 
 
 open Funcaster.Domain

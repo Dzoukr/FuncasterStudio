@@ -4,6 +4,7 @@ open System
 open Azure.Data.Tables
 open Azure.Storage.Blobs
 open FuncasterStudio.Server
+open FuncasterStudio.Server.PodcastStorage
 open Giraffe
 open Giraffe.GoodRead
 open Fable.Remoting.Server
@@ -77,7 +78,7 @@ let private service (blobContainer:BlobContainerClient) (podcastTableClient:Tabl
 
 
 let podcastsAPI : HttpHandler =
-    Require.services<ILogger<_>, BlobContainerClient, TableClient> (fun logger blobContainer tableClient ->
+    Require.services<ILogger<_>, BlobContainerClient, PodcastTable> (fun logger blobContainer (PodcastTable tableClient) ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder PodcastsAPI.RouteBuilder
         |> Remoting.fromValue (service blobContainer tableClient)

@@ -1,11 +1,13 @@
 ﻿module FuncasterStudio.Client.View
 
+open System
 open Feliz
 open Feliz.DaisyUI
 open Feliz.DaisyUI.Operators
 open Router
 open Elmish
 open SharedView
+open FuncasterStudio.Client.Components.HotToast
 
 type Msg =
     | UrlChanged of Page
@@ -35,6 +37,12 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
             ]
         ]
     Html.divClassed "flex flex-col h-screen" [
+        Toaster.toaster [
+            toaster.position ToastPosition.TopRight
+            toaster.options [
+                toast.duration (TimeSpan.FromSeconds 4.)
+            ]
+        ]
         Daisy.navbar [
             prop.className "mb-4 px-4 md:px-16 lg:px-32 shadow-lg bg-neutral text-neutral-content"
             prop.children [
@@ -84,6 +92,7 @@ let AppView (state:State) (dispatch:Msg -> unit) =
             match state.Page with
             | Page.Episodes -> Pages.Episodes.EpisodesView ()
             | Page.EpisodesCreate -> Pages.EpisodesForm.EpisodesFormView None
+            | Page.EpisodesEdit guid -> Pages.EpisodesForm.EpisodesFormView (Some guid)
             | Page.Podcast -> Pages.Podcast.PodcastView ()
             | Page.Messages -> Html.text "ME"
             |> inTemplate state.Page

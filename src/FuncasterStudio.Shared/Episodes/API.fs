@@ -5,6 +5,18 @@ open Aether
 open FuncasterStudio.Shared.Validation
 open Funcaster.Domain
 
+
+type EpisodeListItem = {
+    Guid : string
+    Season : int option
+    Episode : int option
+    //Enclosure : Enclosure
+    Publish : DateTimeOffset
+    Title : string
+    Duration : TimeSpan
+    EpisodeType : EpisodeType
+}
+
 type Episode = {
     Guid : string
     Season : int option
@@ -59,27 +71,17 @@ module Episode =
             check publish Validator.isDateTimeOffsetFormat
         ]
 
-type DataFile = {
-    Data : byte []
-    Name : string
-}
-
-module DataFile =
-    let init = { Data = [||]; Name = "" }
-    let name = NamedLens.create "Name" (fun x -> x.Name) (fun x v -> { v with Name = x })
-    let data = NamedLens.create "Data" (fun x -> x.Data) (fun x v -> { v with Data = x })
-
-    let validate =
-        rules [
-            check name Validator.isNotEmpty
-            check data Validator.isNotEmpty
-        ]
-
 type EpisodesAPI = {
     //GetLogo : string -> Async<string>
     //UploadLogo : byte [] -> Async<unit>
-    GetEpisode : string -> Async<Episode>
-    SaveEpisode : Episode -> Async<unit>
+    GetEpisodes : unit -> Async<EpisodeListItem list>
+    CreateEpisode : Episode -> Async<unit>
 }
 with
     static member RouteBuilder _ m = sprintf "/api/episodes/%s" m
+
+type EpisodesUploaderAPI = {
+    UploadFile : byte [] -> Async<unit>
+}
+with
+    static member RouteBuilder _ m = sprintf "/api/episodesUploader/%s" m

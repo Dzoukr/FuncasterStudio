@@ -6,6 +6,20 @@ open Azure.Data.Tables
 open Azure.Data.Tables.FSharp
 open Newtonsoft.Json
 
+module private Helpers =
+    let toSeparatedString = function
+        | [] -> null
+        | r -> r |> String.concat "|"
+
+    let fromSeparatedString (s:string) =
+        s
+        |> Option.ofObj
+        |> Option.map (fun x -> x.Split("|", StringSplitOptions.RemoveEmptyEntries))
+        |> Option.map (Seq.toList >> List.map (fun x -> x.Trim()))
+        |> Option.defaultValue []
+
+type PodcastTable = PodcastTable of TableClient
+
 module Channel =
     let toEntity (c:Channel) : TableEntity =
         let e = TableEntity()
@@ -21,10 +35,7 @@ module Channel =
         e.["Image"] <- c.Image |> string
         e.["Category"] <- c.Category |> Option.toObj
         e.["Type"] <- c.Type |> ChannelType.value
-        e.["Restrictions"] <-
-            match c.Restrictions with
-            | [] -> null
-            | r -> r |> String.concat "|"
+        e.["Restrictions"] <- c.Restrictions |> Helpers.toSeparatedString
         e
 
     let fromEntity (e:TableEntity) : Channel =
@@ -39,12 +50,7 @@ module Channel =
             Image = e.GetString("Image") |> Uri
             Category = e.GetString("Category") |> Option.ofObj
             Type = e.GetString("Type") |> ChannelType.create
-            Restrictions =
-                e.GetString("Restrictions")
-                |> Option.ofObj
-                |> Option.map (fun x -> x.Split("|", StringSplitOptions.RemoveEmptyEntries))
-                |> Option.map (Seq.toList >> List.map (fun x -> x.Trim()))
-                |> Option.defaultValue []
+            Restrictions = e.GetString("Restrictions") |> Helpers.fromSeparatedString
         }
 
 let getPodcast (podcastTable:TableClient) () =
@@ -62,5 +68,84 @@ let upsertPodcast (podcastTable:TableClient) (channel:Channel) =
     task {
         let entity = channel |> Channel.toEntity
         let! _ = podcastTable.UpsertEntityAsync(entity, TableUpdateMode.Merge)
+        return ()
+    }
+
+type EpisodesTable = EpisodesTable of TableClient
+
+module Item =
+    let toPartialEnclosureEntity (guid:string) (c:Enclosure) : TableEntity =
+        let e = TableEntity()
+        e.PartitionKey <- guid
+        e.RowKey <- guid
+        e.["Enclosure"] <- c |> JsonConvert.SerializeObject
+        e
+
+    let toEntity (c:Item) : TableEntity =
+        let e = TableEntity()
+        e.PartitionKey <- c.Guid
+        e.RowKey <- c.Guid
+        e.["Season"] <- c.Season |> Option.toNullable
+        e.["Episode"] <- c.Episode |> Option.toNullable
+        e.["Enclosure"] <- c.Enclosure |> JsonConvert.SerializeObject
+        e.["Publish"] <- c.Publish
+        e.["Title"] <- c.Title
+        e.["Description"] <- c.Description
+        e.["Restrictions"] <- c.Restrictions |> Helpers.toSeparatedString
+        e.["Duration"] <- c.Duration |> string
+        e.["Explicit"] <- c.Explicit
+        e.["Image"] <- c.Image |> Option.map string |> Option.toObj
+        e.["Keywords"] <- c.Keywords |> Helpers.toSeparatedString
+        e.["EpisodeType"] <- c.EpisodeType |> EpisodeType.value
+        e
+
+    let fromEntity (e:TableEntity) : Item =
+        {
+            Guid = e.RowKey
+            Season = e.GetInt32 "Season" |> Option.ofNullable
+            Episode = e.GetInt32 "Episode" |> Option.ofNullable
+            Enclosure = e.GetString "Enclosure" |> JsonConvert.DeserializeObject<Enclosure>
+            Publish = e.GetDateTimeOffset("Publish").Value
+            Title = e.GetString "Title"
+            Description = e.GetString "Description"
+            Restrictions = e.GetString "Restrictions" |> Helpers.fromSeparatedString
+            Duration = e.GetString "Duration" |> TimeSpan.Parse
+            Explicit = e.GetBoolean("Explicit").Value
+            Image = e.GetString "Image" |> Option.ofObj |> Option.map Uri
+            Keywords = e.GetString "Keywords" |> Helpers.fromSeparatedString
+            EpisodeType = e.GetString "EpisodeType" |> EpisodeType.create
+        }
+
+let getEpisodes (episodesTable:TableClient) () =
+    task {
+        return
+            TableQuery.Empty
+            |> episodesTable.Query<TableEntity>
+            |> Seq.map Item.fromEntity
+            |> Seq.toList
+    }
+
+let getEpisode (episodesTable:TableClient) (g:string) =
+    task {
+        return
+            tableQuery {
+                filter (pk g + rk g)
+            }
+            |> episodesTable.Query<TableEntity>
+            |> Seq.map Item.fromEntity
+            |> Seq.toList
+    }
+
+let upsertEpisode (episodesTable:TableClient) (item:Item) =
+    task {
+        let entity = item |> Item.toEntity
+        let! _ = episodesTable.UpsertEntityAsync(entity, TableUpdateMode.Merge)
+        return ()
+    }
+
+let updateEnclosure (episodesTable:TableClient) guid (enc:Enclosure) =
+    task {
+        let entity = enc |> Item.toPartialEnclosureEntity guid
+        let! _ = episodesTable.UpsertEntityAsync(entity, TableUpdateMode.Merge)
         return ()
     }

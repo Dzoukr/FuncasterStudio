@@ -67,6 +67,7 @@ let fileInput (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit)
     Daisy.formControl [
         Daisy.label [ Daisy.labelText n.Name ]
         Daisy.input [
+            prop.className "pt-1"
             input.bordered
             prop.type'.file
             if err.IsSome then input.error

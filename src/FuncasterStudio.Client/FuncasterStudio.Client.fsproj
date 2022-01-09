@@ -4,6 +4,10 @@
         <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
+        <Compile Include="Interop.fs" />
+        <Compile Include="Components\HotToast\HotToast.fs" />
+        <Compile Include="Components\HotToast\Toast.fs" />
+        <Compile Include="Components\HotToast\Toaster.fs" />
         <Compile Include="Server.fs" />
         <Compile Include="Router.fs" />
         <Compile Include="SharedView.fs" />
@@ -13,7 +17,6 @@
         <Compile Include="Pages\EpisodesForm.fs" />
         <Compile Include="View.fs" />
         <Compile Include="App.fs" />
-        <Content Include="index.html" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\FuncasterStudio.Shared\FuncasterStudio.Shared.fsproj" />

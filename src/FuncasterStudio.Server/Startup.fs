@@ -3,6 +3,7 @@
 open Azure.Data.Tables
 open Azure.Storage.Blobs
 open Azure.Storage.Blobs.Models
+open FuncasterStudio.Server.PodcastStorage
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.AspNetCore.Server.Kestrel.Core
@@ -18,13 +19,17 @@ type Startup(cfg:IConfiguration, env:IWebHostEnvironment) =
         let podcastTable = TableClient(cfg.["PodcastStorage"], "Podcast")
         let _ = podcastTable.CreateIfNotExists()
 
+        let episodesTable = TableClient(cfg.["PodcastStorage"], "Episodes")
+        let _ = episodesTable.CreateIfNotExists()
+
         services
             .Configure<KestrelServerOptions>(fun (x:KestrelServerOptions) ->
                 x.Limits.MaxRequestBodySize <- 500L * 1024L * 1024L
             )
             .AddApplicationInsightsTelemetry(cfg.["APPINSIGHTS_INSTRUMENTATIONKEY"])
             .AddSingleton<BlobContainerClient>(client)
-            .AddSingleton<TableClient>(podcastTable)
+            .AddSingleton<PodcastTable>(PodcastTable podcastTable)
+            .AddSingleton<EpisodesTable>(EpisodesTable episodesTable)
             .AddGiraffe() |> ignore
     member _.Configure(app:IApplicationBuilder) =
         app

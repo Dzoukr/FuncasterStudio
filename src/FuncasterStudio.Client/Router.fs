@@ -7,6 +7,7 @@ open Fable.Core.JsInterop
 type Page =
     | Episodes
     | EpisodesCreate
+    | EpisodesEdit of guid:string
     | Podcast
     | Messages
 
@@ -20,6 +21,7 @@ module Page =
         | c, n -> c = n
 
     let parseFromUrlSegments = function
+        | [ "episodes"; "edit"; Route.Query [ "guid", guid ] ] -> Page.EpisodesEdit guid
         | [ "episodes"; "create" ] -> Page.EpisodesCreate
         | [ "episodes" ] -> Page.Episodes
         | [ "podcast" ] -> Page.Podcast
@@ -29,6 +31,7 @@ module Page =
     let noQueryString segments : string list * (string * string) list = segments, []
 
     let toUrlSegments = function
+        | Page.EpisodesEdit guid -> [ "episodes"; "edit" ], [("guid",guid)]
         | Page.EpisodesCreate -> [ "episodes"; "create" ] |> noQueryString
         | Page.Episodes -> [ "episodes" ] |> noQueryString
         | Page.Podcast -> [ "podcast" ] |> noQueryString

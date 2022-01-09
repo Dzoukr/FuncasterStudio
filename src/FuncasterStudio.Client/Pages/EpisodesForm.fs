@@ -10,11 +10,13 @@ open Feliz.DaisyUI
 open Elmish
 open Feliz.UseElmish
 open Funcaster.Domain
+open FuncasterStudio.Client
 open FuncasterStudio.Client.Server
 open FuncasterStudio.Client.SharedView
 open FuncasterStudio.Client.Forms
 open FuncasterStudio.Shared.Episodes.API
 open Fable.Core.JsInterop
+open FuncasterStudio.Shared.Errors
 open FuncasterStudio.Shared.Validation
 
 type State = {
@@ -22,6 +24,7 @@ type State = {
     Episode : RemoteReadData<Episode>
     EpisodeForm : RemoteData<Episode,unit,ValidationError>
     FileForm : RemoteData<File option,unit,ValidationError>
+    LogoForm : RemoteData<File option,unit,ValidationError>
 }
 
 type Msg =
@@ -29,15 +32,17 @@ type Msg =
     | EpisodeLoaded of Episode
     | EpisodeFormChanged of Episode
     | FileFormChanged of File option
+    | LogoFormChanged of File option
     | SaveEpisode
-    | EpisodeSaved of unit
+    | EpisodeSaved of ServerResult<unit>
 
 let private fileLens = NamedLens.create "Audio File" id (fun (x:File option) (v:File option) -> x )
+let private logoLens = NamedLens.create "Logo" id (fun (x:File option) (v:File option) -> x )
+
 let private validateFile =
     rules [
         check fileLens (Option.map (fun x -> x.name) >> Option.defaultValue "" >> Validator.isNotEmpty)
     ]
-
 
 let init (guid:string option) =
     {
@@ -45,19 +50,61 @@ let init (guid:string option) =
         Episode = RemoteReadData.init
         EpisodeForm = RemoteData.init Episode.init Episode.validate
         FileForm = RemoteData.init None validateFile
+        LogoForm = RemoteData.init None RemoteData.noValidation
     },
         match guid with
         | Some i -> Cmd.batch [Cmd.ofMsg (LoadEpisode i) ]
         | None -> Cmd.none
 
+let private readAsByteOpt (file:File option) =
+    async {
+        let! data =
+            match file with
+            | Some f -> f.ReadAsByteArray()
+            | None -> async.Return [||]
+        if data.Length > 0 then
+            return {| Data = data; Name = file.Value.name |} |> Some
+        else return None
+    }
+
+let private readAsByte (file:File) =
+    async {
+        let! d = file |> Some |> readAsByteOpt
+        return d.Value
+    }
+
 let update (msg:Msg) (state:State) : State * Cmd<Msg> =
     match msg with
     | LoadEpisode i -> state, Cmd.none
+    | EpisodeLoaded i -> state, Cmd.none
     | EpisodeFormChanged form -> { state with EpisodeForm = state.EpisodeForm |> RemoteData.setData form Episode.validate }, Cmd.none
-    | FileFormChanged file ->
-        JS.console.log file
-        { state with FileForm = state.FileForm |> RemoteData.setData file validateFile }, Cmd.none
-
+    | FileFormChanged file -> { state with FileForm = state.FileForm |> RemoteData.setData file validateFile }, Cmd.none
+    | LogoFormChanged file -> { state with LogoForm = state.LogoForm |> RemoteData.setData file RemoteData.noValidation }, Cmd.none
+    | SaveEpisode ->
+        let save () =
+            async {
+                let! formSaved = episodesAPI.CreateEpisode state.EpisodeForm.Data
+                let! f = readAsByte state.FileForm.Data.Value
+                let! fileUploaded =
+                    (episodesUploaderAPI [
+                        ("filename",f.Name)
+                        ("episodeguid",state.EpisodeForm.Data.Guid)
+                        ("season",state.EpisodeForm.Data.Season |> Option.map string |> Option.defaultValue "0")
+                    ]).UploadFile(f.Data)
+                return ()
+            }
+        { state with EpisodeForm = state.EpisodeForm |> RemoteData.setInProgress }, Cmd.OfAsync.eitherAsResult (fun _ -> save ()) EpisodeSaved
+    | EpisodeSaved res ->
+        let cmd =
+            Cmd.batch [
+                res |> ToastView.Cmd.ofResult "Episode successfully created"
+                if res |> ServerResult.isOk then Router.Cmd.navigatePage (Router.Page.Episodes)
+            ]
+        { state with
+            EpisodeForm =
+                state.EpisodeForm
+                |> RemoteData.setResponse ()
+                |> RemoteData.applyValidationErrors (res |> ServerResult.getValidationErrors) }, cmd
 
 [<ReactComponent>]
 let EpisodesFormView (guid:string option) =
@@ -74,34 +121,9 @@ let EpisodesFormView (guid:string option) =
     Html.divClassed "grid grid-cols-12 gap-4" [
         Html.divClassed "col-span-4 text-center" [
             fi fileLens
-
-//            Html.divClassed "text-center" [
-//                Html.img [
-//                    yield!
-//                        match state.Logo with
-//                        | Finished logo -> [ prop.src logo ]
-//                        | _ -> []
-//                    prop.className "w-full mb-2 rounded"
-//                ]
-//                Daisy.input [
-//                    prop.type'.file
-//                    prop.accept ".png"
-//                    prop.onInput (fun e ->
-//                        let file : File = e.target?files?(0)
-//                        file |> LogoFileChosen |> dispatch
-//                    )
-//                ]
-//                if state.LogoUpload.Data.IsSome || state.LogoUpload.InProgress then
-//                    Daisy.button.button [
-//                        prop.text "Upload new logo"
-//                        button.secondary
-//                        if state.LogoUpload.InProgress then button.loading
-//                        prop.onClick (fun _ -> UploadLogo |> dispatch)
-//                    ]
-//            ]
+            //fi logoLens
         ]
         Html.divClassed "col-span-8" [
-
             Html.divClassed "grid grid-cols-2 gap-4" [
                 Html.div [
                     ti Episode.guid
@@ -119,7 +141,6 @@ let EpisodesFormView (guid:string option) =
                     ci Episode.explicit
                 ]
             ]
-
             Daisy.label [  ]
             Daisy.button.button [
                 state.Guid |> Option.map (fun _ -> prop.text "Update") |> Option.defaultValue (prop.text "Add new")
