@@ -8,7 +8,7 @@ open Feliz.DaisyUI
 open FuncasterStudio.Client.Server
 open FuncasterStudio.Shared.Validation
 
-let textInput (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit) (n:NamedLens<'a,string>) =
+let textInput_ props (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit) (n:NamedLens<'a,string>) =
     let value = form.Data |> Optic.get n.Lens
     let err = form.Errors |> ValidationError.get n
     Daisy.formControl [
@@ -19,11 +19,14 @@ let textInput (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit)
             prop.valueOrDefault value
             prop.onTextChange (fun t -> form.Data |> Optic.set n.Lens t |> onDataChanged)
             prop.placeholder n.Name
+            yield! props
         ]
         match err with
         | Some e -> Daisy.label [ Daisy.labelTextAlt [ prop.text (ValidationErrorType.explain e); color.textError ] ]
         | None -> Html.none
     ]
+
+let textInput (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit) (n:NamedLens<'a,string>) = textInput_ [] form onDataChanged n
 
 let textAreaInput (form:RemoteData<'a,_,ValidationError>) (onDataChanged:'a -> unit) (n:NamedLens<'a,string>) =
     let value = form.Data |> Optic.get n.Lens

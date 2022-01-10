@@ -10,6 +10,7 @@ type ValidationErrorType =
     | MustBeLongerThanTimespan of ts:TimeSpan
     | MustBeDateTimeOffsetFormat
     | MustBeTimeSpanFormat
+    | MustBeUnique
 
 module ValidationErrorType =
     let explain = function
@@ -19,6 +20,7 @@ module ValidationErrorType =
         | MustBeLongerThanTimespan ts -> $"Must be longer than {ts}"
         | MustBeDateTimeOffsetFormat -> "Must be a correct date format"
         | MustBeTimeSpanFormat -> "Must be a correct time format"
+        | MustBeUnique -> "Must be unique"
 
 type ValidationError = {
     Key : string

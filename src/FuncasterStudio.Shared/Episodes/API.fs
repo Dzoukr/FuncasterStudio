@@ -17,7 +17,7 @@ type EpisodeListItem = {
     EpisodeType : EpisodeType
 }
 
-type Episode = {
+type  Episode = {
     Guid : string
     Season : int option
     Episode : int option
@@ -75,7 +75,9 @@ type EpisodesAPI = {
     //GetLogo : string -> Async<string>
     //UploadLogo : byte [] -> Async<unit>
     GetEpisodes : unit -> Async<EpisodeListItem list>
+    GetEpisode : string -> Async<Episode * string>
     CreateEpisode : Episode -> Async<unit>
+    UpdateEpisode : Episode -> Async<unit>
 }
 with
     static member RouteBuilder _ m = sprintf "/api/episodes/%s" m

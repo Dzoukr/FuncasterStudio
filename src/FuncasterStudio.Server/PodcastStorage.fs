@@ -6,6 +6,11 @@ open Azure.Data.Tables
 open Azure.Data.Tables.FSharp
 open Newtonsoft.Json
 
+let key (s:string) =
+    ["/";"\\";"#";"?"]
+    |> List.fold (fun (acc:string) item -> acc.Replace(item, "")) s
+    |> (fun x -> x.ToLower())
+
 module private Helpers =
     let toSeparatedString = function
         | [] -> null
@@ -76,15 +81,16 @@ type EpisodesTable = EpisodesTable of TableClient
 module Item =
     let toPartialEnclosureEntity (guid:string) (c:Enclosure) : TableEntity =
         let e = TableEntity()
-        e.PartitionKey <- guid
-        e.RowKey <- guid
+        e.PartitionKey <- guid |> key
+        e.RowKey <- guid.ToLower()
         e.["Enclosure"] <- c |> JsonConvert.SerializeObject
         e
 
     let toEntity (c:Item) : TableEntity =
         let e = TableEntity()
-        e.PartitionKey <- c.Guid
-        e.RowKey <- c.Guid
+        e.PartitionKey <- c.Guid |> key
+        e.RowKey <- c.Guid |> key
+        e.["Guid"] <- c.Guid
         e.["Season"] <- c.Season |> Option.toNullable
         e.["Episode"] <- c.Episode |> Option.toNullable
         e.["Enclosure"] <- c.Enclosure |> JsonConvert.SerializeObject
@@ -101,7 +107,7 @@ module Item =
 
     let fromEntity (e:TableEntity) : Item =
         {
-            Guid = e.RowKey
+            Guid = e.GetString "Guid"
             Season = e.GetInt32 "Season" |> Option.ofNullable
             Episode = e.GetInt32 "Episode" |> Option.ofNullable
             Enclosure = e.GetString "Enclosure" |> JsonConvert.DeserializeObject<Enclosure>
@@ -127,13 +133,14 @@ let getEpisodes (episodesTable:TableClient) () =
 
 let getEpisode (episodesTable:TableClient) (g:string) =
     task {
+        let g = g |> key
         return
             tableQuery {
                 filter (pk g + rk g)
             }
             |> episodesTable.Query<TableEntity>
             |> Seq.map Item.fromEntity
-            |> Seq.toList
+            |> Seq.tryHead
     }
 
 let upsertEpisode (episodesTable:TableClient) (item:Item) =
@@ -143,9 +150,9 @@ let upsertEpisode (episodesTable:TableClient) (item:Item) =
         return ()
     }
 
-let updateEnclosure (episodesTable:TableClient) guid (enc:Enclosure) =
+let updateEnclosure (episodesTable:TableClient) (guid:string) (enc:Enclosure) =
     task {
-        let entity = enc |> Item.toPartialEnclosureEntity guid
+        let entity = enc |> Item.toPartialEnclosureEntity (guid |> key)
         let! _ = episodesTable.UpsertEntityAsync(entity, TableUpdateMode.Merge)
         return ()
     }

@@ -19,38 +19,46 @@ open Fable.Core.JsInterop
 open FuncasterStudio.Shared.Errors
 open FuncasterStudio.Shared.Validation
 
+let private withTS (s:string) =
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+    |> string
+    |> (fun x -> $"{s}?{x}")
+
 type State = {
     Guid : string option
-    Episode : RemoteReadData<Episode>
+    Episode : RemoteReadData<Episode * string>
     EpisodeForm : RemoteData<Episode,unit,ValidationError>
     FileForm : RemoteData<File option,unit,ValidationError>
-    LogoForm : RemoteData<File option,unit,ValidationError>
+//    LogoForm : RemoteData<File option,unit,ValidationError>
 }
 
 type Msg =
     | LoadEpisode of guid:string
-    | EpisodeLoaded of Episode
+    | EpisodeLoaded of ServerResult<Episode * string>
     | EpisodeFormChanged of Episode
     | FileFormChanged of File option
-    | LogoFormChanged of File option
+//    | LogoFormChanged of File option
     | SaveEpisode
     | EpisodeSaved of ServerResult<unit>
 
 let private fileLens = NamedLens.create "Audio File" id (fun (x:File option) (v:File option) -> x )
-let private logoLens = NamedLens.create "Logo" id (fun (x:File option) (v:File option) -> x )
+//let private logoLens = NamedLens.create "Logo" id (fun (x:File option) (v:File option) -> x )
 
-let private validateFile =
-    rules [
-        check fileLens (Option.map (fun x -> x.name) >> Option.defaultValue "" >> Validator.isNotEmpty)
-    ]
+let private validateFile (guid:string option) =
+    match guid with
+    | Some _ -> RemoteData.noValidation
+    | None ->
+        rules [
+            check fileLens (Option.map (fun x -> x.name) >> Option.defaultValue "" >> Validator.isNotEmpty)
+        ]
 
 let init (guid:string option) =
     {
         Guid = guid
         Episode = RemoteReadData.init
         EpisodeForm = RemoteData.init Episode.init Episode.validate
-        FileForm = RemoteData.init None validateFile
-        LogoForm = RemoteData.init None RemoteData.noValidation
+        FileForm = RemoteData.init None (validateFile guid)
+//        LogoForm = RemoteData.init None RemoteData.noValidation
     },
         match guid with
         | Some i -> Cmd.batch [Cmd.ofMsg (LoadEpisode i) ]
@@ -75,29 +83,55 @@ let private readAsByte (file:File) =
 
 let update (msg:Msg) (state:State) : State * Cmd<Msg> =
     match msg with
-    | LoadEpisode i -> state, Cmd.none
-    | EpisodeLoaded i -> state, Cmd.none
+    | LoadEpisode i -> { state with Episode = RemoteReadData.setInProgress }, Cmd.OfAsync.eitherAsResult (fun _ -> episodesAPI.GetEpisode i) EpisodeLoaded
+    | EpisodeLoaded res ->
+        match res with
+        | Ok v ->
+            let v = (fst v), (snd v |> withTS)
+            { state with Episode = RemoteReadData.setResponse v; EpisodeForm = state.EpisodeForm |> RemoteData.setData (fst v) Episode.validate }, Cmd.none
+        | Error e -> { state with Episode = RemoteReadData.init }, ToastView.Cmd.ofError e
     | EpisodeFormChanged form -> { state with EpisodeForm = state.EpisodeForm |> RemoteData.setData form Episode.validate }, Cmd.none
-    | FileFormChanged file -> { state with FileForm = state.FileForm |> RemoteData.setData file validateFile }, Cmd.none
-    | LogoFormChanged file -> { state with LogoForm = state.LogoForm |> RemoteData.setData file RemoteData.noValidation }, Cmd.none
+    | FileFormChanged file -> { state with FileForm = state.FileForm |> RemoteData.setData file (validateFile state.Guid) }, Cmd.none
+//    | LogoFormChanged file -> { state with LogoForm = state.LogoForm |> RemoteData.setData file RemoteData.noValidation }, Cmd.none
     | SaveEpisode ->
         let save () =
-            async {
-                let! formSaved = episodesAPI.CreateEpisode state.EpisodeForm.Data
-                let! f = readAsByte state.FileForm.Data.Value
-                let! fileUploaded =
-                    (episodesUploaderAPI [
-                        ("filename",f.Name)
-                        ("episodeguid",state.EpisodeForm.Data.Guid)
-                        ("season",state.EpisodeForm.Data.Season |> Option.map string |> Option.defaultValue "0")
-                    ]).UploadFile(f.Data)
-                return ()
-            }
+            match state.Guid with
+            | None ->
+                async {
+                    let! _ = episodesAPI.CreateEpisode state.EpisodeForm.Data
+                    let! f = readAsByte state.FileForm.Data.Value
+                    let! _ =
+                        (episodesUploaderAPI [
+                            ("filename",f.Name)
+                            ("episodeguid",state.EpisodeForm.Data.Guid)
+                            ("season",state.EpisodeForm.Data.Season |> Option.map string |> Option.defaultValue "0")
+                        ]).UploadFile(f.Data)
+                    return ()
+                }
+            | Some guid ->
+                async {
+                    let! _ = episodesAPI.UpdateEpisode state.EpisodeForm.Data
+
+                    match state.FileForm.Data with
+                    | Some data ->
+                        let! f = readAsByte data
+                        let! _ =
+                            (episodesUploaderAPI [
+                                ("replaceoldfile", "true")
+                                ("filename",f.Name)
+                                ("episodeguid", guid)
+                                ("season",state.EpisodeForm.Data.Season |> Option.map string |> Option.defaultValue "0")
+                            ]).UploadFile(f.Data)
+                        ()
+                    | None -> ()
+                    return ()
+                }
         { state with EpisodeForm = state.EpisodeForm |> RemoteData.setInProgress }, Cmd.OfAsync.eitherAsResult (fun _ -> save ()) EpisodeSaved
     | EpisodeSaved res ->
         let cmd =
+            let msg = if state.Guid.IsSome then "Episode successfully updated" else "Episode successfully created"
             Cmd.batch [
-                res |> ToastView.Cmd.ofResult "Episode successfully created"
+                res |> ToastView.Cmd.ofResult msg
                 if res |> ServerResult.isOk then Router.Cmd.navigatePage (Router.Page.Episodes)
             ]
         { state with
@@ -121,12 +155,25 @@ let EpisodesFormView (guid:string option) =
     Html.divClassed "grid grid-cols-12 gap-4" [
         Html.divClassed "col-span-4 text-center" [
             fi fileLens
+            match state.Episode with
+            | Finished (_,file) ->
+                Html.audio [
+                    prop.controls true
+                    prop.className "mt-4 w-full"
+                    prop.children [
+                        Html.source [
+                            prop.src file
+                        ]
+                    ]
+                ]
+            | _ -> Html.none
+
             //fi logoLens
         ]
         Html.divClassed "col-span-8" [
             Html.divClassed "grid grid-cols-2 gap-4" [
                 Html.div [
-                    ti Episode.guid
+                    textInput_ [ if state.Guid.IsSome then prop.disabled true ] state.EpisodeForm (EpisodeFormChanged >> dispatch) Episode.guid
                     ti Episode.title
                     lti Episode.description
                     ti Episode.duration
