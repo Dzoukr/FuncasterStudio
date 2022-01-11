@@ -1,10 +1,7 @@
 ﻿module FuncasterStudio.Server.Podcasts.API
 
 open System
-open Azure.Data.Tables
 open Azure.Storage.Blobs
-open FuncasterStudio.Server
-open FuncasterStudio.Server.PodcastStorage
 open Giraffe
 open Giraffe.GoodRead
 open Fable.Remoting.Server
@@ -27,9 +24,9 @@ let private getLogo (blobContainer:BlobContainerClient) () =
         return blobContainer.GetBlobClient(logoName).Uri |> string
     }
 
-let getPodcast (podcastTableClient:TableClient) () =
+let getPodcast podcastTable () =
     task {
-        match! PodcastStorage.getPodcast podcastTableClient () with
+        match! Funcaster.Storage.getPodcast podcastTable () with
         | Some c ->
             return
                 {
@@ -48,7 +45,7 @@ let getPodcast (podcastTableClient:TableClient) () =
         | None -> return Channel.init
     }
 
-let savePodcast (blobContainer:BlobContainerClient) (podcastTableClient:TableClient) (c:Channel) =
+let savePodcast (blobContainer:BlobContainerClient) podcastTable (c:Channel) =
     task {
         let! logo = getLogo blobContainer ()
         let channel : Funcaster.Domain.Channel =
@@ -66,22 +63,21 @@ let savePodcast (blobContainer:BlobContainerClient) (podcastTableClient:TableCli
                 Restrictions = c.Restrictions
             }
         return!
-            channel |> PodcastStorage.upsertPodcast podcastTableClient
+            channel |> Funcaster.Storage.upsertPodcast podcastTable
     }
 
-let private service (blobContainer:BlobContainerClient) (podcastTableClient:TableClient) = {
+let private service (blobContainer:BlobContainerClient) podcastTable = {
     GetLogo = getLogo blobContainer >> Async.AwaitTask
     UploadLogo = uploadLogo blobContainer >> Async.AwaitTask
-    GetPodcast = getPodcast podcastTableClient >> Async.AwaitTask
-    SavePodcast = savePodcast blobContainer podcastTableClient >> Async.AwaitTask
+    GetPodcast = getPodcast podcastTable >> Async.AwaitTask
+    SavePodcast = savePodcast blobContainer podcastTable >> Async.AwaitTask
 }
 
-
 let podcastsAPI : HttpHandler =
-    Require.services<ILogger<_>, BlobContainerClient, PodcastTable> (fun logger blobContainer (PodcastTable tableClient) ->
+    Require.services<ILogger<_>, BlobContainerClient, Funcaster.Storage.PodcastTable> (fun logger blobContainer podcastTable ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder PodcastsAPI.RouteBuilder
-        |> Remoting.fromValue (service blobContainer tableClient)
+        |> Remoting.fromValue (service blobContainer podcastTable)
         |> Remoting.withBinarySerialization
         |> Remoting.withErrorHandler (Remoting.errorHandler logger)
         |> Remoting.buildHttpHandler

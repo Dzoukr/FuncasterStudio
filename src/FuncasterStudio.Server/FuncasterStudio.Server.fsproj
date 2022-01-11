@@ -5,9 +5,12 @@
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\paket-files\Dzoukr\Funcaster\src\Funcaster\Storage.fs">
+      <Paket>True</Paket>
+      <Link>paket-files/Storage.fs</Link>
+    </Compile>
     <Compile Include="Errors.fs" />
     <Compile Include="Remoting.fs" />
-    <Compile Include="PodcastStorage.fs" />
     <Compile Include="Podcasts\API.fs" />
     <Compile Include="Episodes\API.fs" />
     <Compile Include="WebApp.fs" />

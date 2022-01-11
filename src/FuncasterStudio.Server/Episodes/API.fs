@@ -7,7 +7,6 @@ open Azure.Storage.Blobs
 open Funcaster.Domain
 open FuncasterStudio.Server
 open FuncasterStudio.Server.Errors
-open FuncasterStudio.Server.PodcastStorage
 open FuncasterStudio.Shared.Episodes.API
 open FuncasterStudio.Shared.Errors
 open FuncasterStudio.Shared.Validation
@@ -20,9 +19,9 @@ open Microsoft.AspNetCore.Http
 open Microsoft.AspNetCore.StaticFiles
 open Microsoft.Extensions.Logging
 
-let private getEpisodes (episodesTableClient:TableClient) () =
+let private getEpisodes episodesTable () =
     task {
-        let! eps = PodcastStorage.getEpisodes episodesTableClient ()
+        let! eps = Funcaster.Storage.getEpisodes episodesTable ()
         return
             eps
             |> List.map (fun x ->
@@ -39,9 +38,9 @@ let private getEpisodes (episodesTableClient:TableClient) () =
             |> List.sortByDescending (fun x -> x.Publish)
     }
 
-let private getEpisode (episodesTableClient:TableClient) (guid:string) =
+let private getEpisode episodesTable (guid:string) =
     task {
-        let! ep = PodcastStorage.getEpisode episodesTableClient guid
+        let! ep = Funcaster.Storage.getEpisode episodesTable guid
         let ep = ep.Value
         return
             ({
@@ -59,7 +58,7 @@ let private getEpisode (episodesTableClient:TableClient) (guid:string) =
             } : Episode), (ep.Enclosure.Url |> string)
     }
 
-let private createEpisode (episodesTableClient:TableClient) (c:Episode) =
+let private createEpisode episodesTable (c:Episode) =
     task {
         let item : Funcaster.Domain.Item =
             {
@@ -78,12 +77,12 @@ let private createEpisode (episodesTableClient:TableClient) (c:Episode) =
                 EpisodeType = c.EpisodeType
             }
         return!
-            item |> PodcastStorage.upsertEpisode episodesTableClient
+            item |> Funcaster.Storage.upsertEpisode episodesTable
     }
 
-let private updateEpisode (episodesTableClient:TableClient) (c:Episode) =
+let private updateEpisode episodesTable (c:Episode) =
     task {
-        match! PodcastStorage.getEpisode episodesTableClient c.Guid with
+        match! Funcaster.Storage.getEpisode episodesTable c.Guid with
         | Some item ->
             return!
                 { item with
@@ -99,54 +98,54 @@ let private updateEpisode (episodesTableClient:TableClient) (c:Episode) =
                     Keywords = c.Keywords
                     EpisodeType = c.EpisodeType
                 }
-                |> PodcastStorage.upsertEpisode episodesTableClient
+                |> Funcaster.Storage.upsertEpisode episodesTable
         | None -> return ()
     }
 
 let private getEnclosureLocalUrl (blobContainer:BlobContainerClient) (enc:Enclosure) =
     enc.Url |> string |> (fun x -> x.Replace(blobContainer.Uri |> string, ""))
 
-let private deleteEpisode (blobContainer:BlobContainerClient) (episodesTableClient:TableClient) (guid:string) =
+let private deleteEpisode (blobContainer:BlobContainerClient) episodesTable (guid:string) =
     task {
-        match! PodcastStorage.getEpisode episodesTableClient guid with
+        match! Funcaster.Storage.getEpisode episodesTable guid with
         | Some item ->
             // delete episode
-            let! _ = PodcastStorage.deleteEpisode episodesTableClient guid
+            let! _ = Funcaster.Storage.deleteEpisode episodesTable guid
             let! _ = blobContainer.DeleteBlobIfExistsAsync(item.Enclosure |> getEnclosureLocalUrl blobContainer)
             return ()
         | None -> return ()
     }
 
-let private validateUnique (episodesTableClient:TableClient) (ep:Episode) =
+let private validateUnique episodesTable (ep:Episode) =
     task {
-        let! item = PodcastStorage.getEpisode episodesTableClient ep.Guid
+        let! item = Funcaster.Storage.getEpisode episodesTable ep.Guid
         if item.IsSome then return [{ Key = Episode.guid.Name; Message = ValidationErrorType.MustBeUnique }]
         else return []
     }
 
-let private service (blobContainer:BlobContainerClient) (episodesTableClient:TableClient) = {
+let private service (blobContainer:BlobContainerClient) episodesTable = {
     CreateEpisode =
         ServerError.validate Episode.validate
-        >> ServerError.validateAsync (validateUnique episodesTableClient)
-        >> Task.bind (createEpisode episodesTableClient)
+        >> ServerError.validateAsync (validateUnique episodesTable)
+        >> Task.bind (createEpisode episodesTable)
         >> Async.AwaitTask
     UpdateEpisode =
         ServerError.validate Episode.validate
-        >> updateEpisode episodesTableClient >> Async.AwaitTask
-    GetEpisodes = getEpisodes episodesTableClient >> Async.AwaitTask
-    GetEpisode = getEpisode episodesTableClient >> Async.AwaitTask
-    DeleteEpisode = deleteEpisode blobContainer episodesTableClient >> Async.AwaitTask
+        >> updateEpisode episodesTable >> Async.AwaitTask
+    GetEpisodes = getEpisodes episodesTable >> Async.AwaitTask
+    GetEpisode = getEpisode episodesTable >> Async.AwaitTask
+    DeleteEpisode = deleteEpisode blobContainer episodesTable >> Async.AwaitTask
 }
 
-let private uploadFile (blobContainer:BlobContainerClient) (episodesTableClient:TableClient) (ctx:HttpContext) (b:byte []) =
+let private uploadFile (blobContainer:BlobContainerClient) episodesTable (ctx:HttpContext) (b:byte []) =
     task {
         let originalName = ctx.Request.Headers.["filename"].[0]
-        let episodeGuid = ctx.Request.Headers.["episodeGuid"].[0] |> key
+        let episodeGuid = ctx.Request.Headers.["episodeGuid"].[0] |> Funcaster.Storage.key
         let season = ctx.Request.Headers.["season"].[0] |> int
         let deleteFile = ctx.Request.Headers.["replaceoldfile"].Count > 0
         let name = $"episodes/s{season}/{episodeGuid}{Path.GetExtension originalName}"
         if deleteFile then
-            match! PodcastStorage.getEpisode episodesTableClient episodeGuid with
+            match! Funcaster.Storage.getEpisode episodesTable episodeGuid with
             | Some item ->
                 let name = getEnclosureLocalUrl blobContainer item.Enclosure
                 let! _ = blobContainer.DeleteBlobIfExistsAsync(name)
@@ -166,16 +165,16 @@ let private uploadFile (blobContainer:BlobContainerClient) (episodesTableClient:
                 Length = b.LongLength
             }
 
-        return! enc |> PodcastStorage.updateEnclosure episodesTableClient episodeGuid
+        return! enc |> Funcaster.Storage.updateEnclosure episodesTable episodeGuid
     }
 
-let private uploaderService (blobContainer:BlobContainerClient) (episodesTableClient:TableClient) (ctx:HttpContext) =
+let private uploaderService (blobContainer:BlobContainerClient) episodesTable (ctx:HttpContext) =
     {
-        UploadFile = uploadFile blobContainer episodesTableClient ctx >> Async.AwaitTask
+        UploadFile = uploadFile blobContainer episodesTable ctx >> Async.AwaitTask
     }
 
 let episodesAPI : HttpHandler =
-    Require.services<ILogger<_>, BlobContainerClient, EpisodesTable> (fun logger blobContainer (EpisodesTable tableClient) ->
+    Require.services<ILogger<_>, BlobContainerClient, Funcaster.Storage.EpisodesTable> (fun logger blobContainer tableClient ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder EpisodesAPI.RouteBuilder
         |> Remoting.fromValue (service blobContainer tableClient)
@@ -185,7 +184,7 @@ let episodesAPI : HttpHandler =
     )
 
 let episodesUploaderAPI : HttpHandler =
-    Require.services<ILogger<_>, BlobContainerClient, EpisodesTable> (fun logger blobContainer (EpisodesTable tableClient) ->
+    Require.services<ILogger<_>, BlobContainerClient, Funcaster.Storage.EpisodesTable> (fun logger blobContainer tableClient ->
         Remoting.createApi()
         |> Remoting.withRouteBuilder EpisodesUploaderAPI.RouteBuilder
         |> Remoting.fromContext (uploaderService blobContainer tableClient)

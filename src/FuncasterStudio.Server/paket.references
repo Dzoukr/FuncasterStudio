@@ -5,3 +5,4 @@ Fable.Remoting.Giraffe
 FsToolkit.ErrorHandling.TaskResult
 Tables.FSharp
 Azure.Storage.Blobs
+File: Storage.fs

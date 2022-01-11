@@ -3,7 +3,6 @@
 open Azure.Data.Tables
 open Azure.Storage.Blobs
 open Azure.Storage.Blobs.Models
-open FuncasterStudio.Server.PodcastStorage
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.AspNetCore.Server.Kestrel.Core
@@ -28,8 +27,8 @@ type Startup(cfg:IConfiguration, env:IWebHostEnvironment) =
             )
             .AddApplicationInsightsTelemetry(cfg.["APPINSIGHTS_INSTRUMENTATIONKEY"])
             .AddSingleton<BlobContainerClient>(client)
-            .AddSingleton<PodcastTable>(PodcastTable podcastTable)
-            .AddSingleton<EpisodesTable>(EpisodesTable episodesTable)
+            .AddSingleton<Funcaster.Storage.PodcastTable>(Funcaster.Storage.PodcastTable podcastTable)
+            .AddSingleton<Funcaster.Storage.EpisodesTable>(Funcaster.Storage.EpisodesTable episodesTable)
             .AddGiraffe() |> ignore
     member _.Configure(app:IApplicationBuilder) =
         app

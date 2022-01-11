@@ -422,7 +422,8 @@ NUGET
       System.ValueTuple (>= 4.4)
 GITHUB
   remote: Dzoukr/Funcaster
-    src/Funcaster/Domain.fs (621a9d92167161fec39e6398314cb39e774fcfe9)
+    src/Funcaster/Domain.fs (fed200c9baf2897e09e4c52f9c5d840f4a397c07)
+    src/Funcaster/Storage.fs (fed200c9baf2897e09e4c52f9c5d840f4a397c07)
 GROUP Build
 STORAGE: NONE
 RESTRICTION: == net6.0

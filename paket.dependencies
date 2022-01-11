@@ -5,6 +5,7 @@ framework: net6.0, netstandard2.0
 storage: none
 
 github Dzoukr/Funcaster src/Funcaster/Domain.fs
+github Dzoukr/Funcaster src/Funcaster/Storage.fs
 
 nuget Fable.Remoting.Giraffe
 nuget Giraffe
