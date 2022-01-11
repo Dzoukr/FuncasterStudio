@@ -40,6 +40,8 @@ type Msg =
 //    | LogoFormChanged of File option
     | SaveEpisode
     | EpisodeSaved of ServerResult<unit>
+    | DeleteEpisode
+    | EpisodeDeleted of ServerResult<unit>
 
 let private fileLens = NamedLens.create "Audio File" id (fun (x:File option) (v:File option) -> x )
 //let private logoLens = NamedLens.create "Logo" id (fun (x:File option) (v:File option) -> x )
@@ -127,6 +129,14 @@ let update (msg:Msg) (state:State) : State * Cmd<Msg> =
                     return ()
                 }
         { state with EpisodeForm = state.EpisodeForm |> RemoteData.setInProgress }, Cmd.OfAsync.eitherAsResult (fun _ -> save ()) EpisodeSaved
+    | DeleteEpisode -> state, Cmd.OfAsync.eitherAsResult (fun _ -> episodesAPI.DeleteEpisode state.Guid.Value) EpisodeDeleted
+    | EpisodeDeleted res ->
+        let cmd =
+            Cmd.batch [
+                res |> ToastView.Cmd.ofResult "Episode successfully deleted"
+                if res |> ServerResult.isOk then Router.Cmd.navigatePage (Router.Page.Episodes)
+            ]
+        state, cmd
     | EpisodeSaved res ->
         let cmd =
             let msg = if state.Guid.IsSome then "Episode successfully updated" else "Episode successfully created"
@@ -139,6 +149,37 @@ let update (msg:Msg) (state:State) : State * Cmd<Msg> =
                 state.EpisodeForm
                 |> RemoteData.setResponse ()
                 |> RemoteData.applyValidationErrors (res |> ServerResult.getValidationErrors) }, cmd
+
+let private deleteModal onDelete =
+    React.fragment [
+        Daisy.button.label [
+            prop.htmlFor "delete-modal"
+            button.error
+            prop.text "Delete"
+            prop.className "ml-2"
+        ]
+        Html.div [
+            Daisy.modalToggle [ prop.id "delete-modal" ]
+            Daisy.modal [
+                prop.children [
+                    Daisy.modalBox [
+                        Html.p "Do you really want to delete episode including stored audio file?"
+                        Daisy.modalAction [
+                            Daisy.button.label [
+                                button.error
+                                prop.text "Yes, delete my episode"
+                                prop.onClick (fun _ -> onDelete())
+                            ]
+                            Daisy.button.label [
+                                prop.htmlFor "delete-modal"
+                                prop.text "Oh, God No!"
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
 
 [<ReactComponent>]
 let EpisodesFormView (guid:string option) =
@@ -196,5 +237,7 @@ let EpisodesFormView (guid:string option) =
                 if state.EpisodeForm.InProgress then button.loading
                 prop.onClick (fun _ -> SaveEpisode |> dispatch)
             ]
+            if state.Guid.IsSome then
+                deleteModal (fun _ -> DeleteEpisode |> dispatch)
         ]
     ]

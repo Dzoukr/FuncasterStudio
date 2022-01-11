@@ -150,6 +150,12 @@ let upsertEpisode (episodesTable:TableClient) (item:Item) =
         return ()
     }
 
+let deleteEpisode (episodesTable:TableClient) (guid:string) =
+    task {
+        let! _ = episodesTable.DeleteEntityAsync(key guid, key guid)
+        return ()
+    }
+
 let updateEnclosure (episodesTable:TableClient) (guid:string) (enc:Enclosure) =
     task {
         let entity = enc |> Item.toPartialEnclosureEntity (guid |> key)

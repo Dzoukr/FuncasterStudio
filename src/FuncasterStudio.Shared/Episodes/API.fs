@@ -78,6 +78,7 @@ type EpisodesAPI = {
     GetEpisode : string -> Async<Episode * string>
     CreateEpisode : Episode -> Async<unit>
     UpdateEpisode : Episode -> Async<unit>
+    DeleteEpisode : string -> Async<unit>
 }
 with
     static member RouteBuilder _ m = sprintf "/api/episodes/%s" m
