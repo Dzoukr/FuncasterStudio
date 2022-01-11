@@ -16,4 +16,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 COPY --from=build /workspace/publish/app /app
 WORKDIR /app
 EXPOSE 80
-ENTRYPOINT [ "dotnet", "Funcaster.Server.dll" ]
+ENTRYPOINT [ "dotnet", "FuncasterStudio.Server.dll" ]
