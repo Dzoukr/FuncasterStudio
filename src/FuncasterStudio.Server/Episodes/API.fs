@@ -143,7 +143,7 @@ let private uploadFile (blobContainer:BlobContainerClient) episodesTable (ctx:Ht
         let episodeGuid = ctx.Request.Headers.["episodeGuid"].[0] |> Funcaster.Storage.key
         let season = ctx.Request.Headers.["season"].[0] |> int
         let deleteFile = ctx.Request.Headers.["replaceoldfile"].Count > 0
-        let name = $"episodes/s{season}/{episodeGuid}{Path.GetExtension originalName}"
+        let name = $"episodes/s{season:D2}/{episodeGuid}{Path.GetExtension originalName}"
         if deleteFile then
             match! Funcaster.Storage.getEpisode episodesTable episodeGuid with
             | Some item ->
