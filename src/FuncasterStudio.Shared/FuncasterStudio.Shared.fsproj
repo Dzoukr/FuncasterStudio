@@ -13,6 +13,7 @@
     <Compile Include="Errors.fs" />
     <Compile Include="Podcasts\API.fs" />
     <Compile Include="Episodes\API.fs" />
+    <Compile Include="CdnSetup\API.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

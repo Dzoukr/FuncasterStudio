@@ -13,6 +13,7 @@
     <Compile Include="Remoting.fs" />
     <Compile Include="Podcasts\API.fs" />
     <Compile Include="Episodes\API.fs" />
+    <Compile Include="CdnSetup\API.fs" />
     <Compile Include="WebApp.fs" />
     <Compile Include="Startup.fs" />
     <Compile Include="Program.fs" />

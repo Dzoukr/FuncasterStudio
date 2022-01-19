@@ -7,5 +7,6 @@ let webApp : HttpHandler =
         Podcasts.API.podcastsAPI
         Episodes.API.episodesAPI
         Episodes.API.episodesUploaderAPI
+        CdnSetup.API.cdnSetupAPI
         htmlFile "public/index.html"
     ]

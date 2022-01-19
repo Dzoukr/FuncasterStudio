@@ -55,6 +55,7 @@ let private inTemplate (ap:Page) (elm:ReactElement) =
                     btn Page.Episodes "Episodes" "fas fa-stream"
                     btn Page.Podcast "Podcast" "fas fa-podcast"
                     //btn Page.Messages "Messages" "fas fa-comments"
+                    btn Page.CdnSetup "CDN" "fas fa-network-wired"
                 ]
                 Daisy.navbarEnd []
             ]
@@ -95,6 +96,7 @@ let AppView (state:State) (dispatch:Msg -> unit) =
             | Page.EpisodesEdit guid -> Pages.EpisodesForm.EpisodesFormView (Some guid)
             | Page.Podcast -> Pages.Podcast.PodcastView ()
             | Page.Messages -> Html.text "ME"
+            | Page.CdnSetup -> Pages.CdnSetup.CdnSetupView ()
             |> inTemplate state.Page
         ]
     ]

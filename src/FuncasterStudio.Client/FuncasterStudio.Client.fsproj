@@ -15,6 +15,7 @@
         <Compile Include="Pages\Podcast.fs" />
         <Compile Include="Pages\Episodes.fs" />
         <Compile Include="Pages\EpisodesForm.fs" />
+        <Compile Include="Pages\CdnSetup.fs" />
         <Compile Include="View.fs" />
         <Compile Include="App.fs" />
     </ItemGroup>

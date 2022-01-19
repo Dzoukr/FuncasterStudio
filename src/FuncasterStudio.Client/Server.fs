@@ -2,6 +2,7 @@
 
 open Fable.Core.JS
 open Fable.Remoting.Client
+open FuncasterStudio.Shared.CdnSetup.API
 open FuncasterStudio.Shared.Episodes.API
 open FuncasterStudio.Shared.Errors
 open FuncasterStudio.Shared.Podcasts.API
@@ -88,3 +89,9 @@ let episodesUploaderAPI headers =
     |> Remoting.withBinarySerialization
     |> Remoting.withCustomHeader headers
     |> Remoting.buildProxy<EpisodesUploaderAPI>
+
+let cdnSetupAPI =
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder CdnSetupAPI.RouteBuilder
+    |> Remoting.withBinarySerialization
+    |> Remoting.buildProxy<CdnSetupAPI>

@@ -17,7 +17,7 @@ type EpisodeListItem = {
     EpisodeType : EpisodeType
 }
 
-type  Episode = {
+type Episode = {
     Guid : string
     Season : int option
     Episode : int option

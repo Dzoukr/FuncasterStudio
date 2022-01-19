@@ -10,6 +10,7 @@ type Page =
     | EpisodesEdit of guid:string
     | Podcast
     | Messages
+    | CdnSetup
 
 [<RequireQualifiedAccess>]
 module Page =
@@ -26,6 +27,7 @@ module Page =
         | [ "episodes" ] -> Page.Episodes
         | [ "podcast" ] -> Page.Podcast
         | [ "messages" ] -> Page.Messages
+        | [ "cdnsetup" ] -> Page.CdnSetup
         | _ -> defaultPage
 
     let noQueryString segments : string list * (string * string) list = segments, []
@@ -36,6 +38,7 @@ module Page =
         | Page.Episodes -> [ "episodes" ] |> noQueryString
         | Page.Podcast -> [ "podcast" ] |> noQueryString
         | Page.Messages -> [ "messages" ] |> noQueryString
+        | Page.CdnSetup -> [ "cdnsetup" ] |> noQueryString
 
 [<RequireQualifiedAccess>]
 module Router =
